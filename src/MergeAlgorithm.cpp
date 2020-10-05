@@ -353,7 +353,6 @@ int MergeAlgorithm::cellsInAgreement(quadmap::QuadTree m1, const quadmap::QuadTr
             {
                 ++agree;
             }
-
     }
 
     return agree;
@@ -371,7 +370,6 @@ int MergeAlgorithm::cellsInDisagreement(quadmap::QuadTree m1, const quadmap::Qua
             {
                 ++disagree;
             }
-
     }
 
     return disagree;
