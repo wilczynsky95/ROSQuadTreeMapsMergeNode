@@ -1,10 +1,5 @@
 #include "quad_tree_maps/MergeAlgorithm.h"
 
-MergeAlgorithm::MergeAlgorithm()
-{
-
-}
-
 std::pair<MergeAlgorithm::transformation, MergeAlgorithm::transformation> MergeAlgorithm::updateGauss(const transformation &sample)
 {
     transformation variance;

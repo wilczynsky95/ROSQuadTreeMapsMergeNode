@@ -93,7 +93,7 @@ private:
     std::mt19937 gen{rd()};
 
 public:
-    explicit MergeAlgorithm();
+    explicit MergeAlgorithm() = default;
 
     enum cellState { FREE, UNKNOWN, OCCUPIED };
     void randomAdaptiveWalk(int numSteps, const QuadMap &m1, QuadMap &m2);
