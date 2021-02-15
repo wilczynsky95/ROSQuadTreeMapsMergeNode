@@ -1,6 +1,6 @@
 #include "quad_tree_maps/MergeAlgorithm.h"
 
-std::pair<MergeAlgorithm::transformation, MergeAlgorithm::transformation> MergeAlgorithm::updateGauss(const transformation &sample)
+std::pair<transformation, transformation> MergeAlgorithm::updateGauss(const transformation &sample)
 {
     transformation variance;
     transformation mean;
@@ -51,17 +51,18 @@ void MergeAlgorithm::randomAdaptiveWalk(int numSteps, const QuadMap &m1, QuadMap
 
     while(step < numSteps)
     {
-        //  Tworzenie nowej próbki
+        //  New sample
         s.tX = t.tX + randGenerator(mean, std::max(minVariance, noise.second.tX));
         s.tY = t.tY + randGenerator(mean, std::max(minVariance, noise.second.tY));
         s.theta = t.theta + randGenerator(mean, std::max(minVariance, noise.second.theta));
 
-        //  Transformacja mapy i obliczenie wartosci wskaznikow
+        //  Map transformation
         m2.transformMapInPlace(s.tX, s.tY, degToRad(s.theta));
         cellsInAgr = cellsInAgreement(*m1.getOriginalMap(), *m2.getMovingMap());
         currentFitness = deltaHeuristic(*m1.getOriginalMap(), *m2.getMovingMap());
         currentAI = overlap(*m1.getOriginalMap(), *m2.getMovingMap());
 
+        // If common coverage below treshold
         if(currentAI == 0 || currentAI == 100 || cellsInAgr < 50)
         {
             t = emergencyTransformations.front();
@@ -69,7 +70,6 @@ void MergeAlgorithm::randomAdaptiveWalk(int numSteps, const QuadMap &m1, QuadMap
             s.tY = t.tY + randGenerator(mean, std::max(minVariance, noise.second.tY));
             s.theta = t.theta + randGenerator(mean, std::max(minVariance, noise.second.theta));
 
-            //  Transformacja mapy
             m2.transformMapInPlace(s.tX, s.tY, degToRad(s.theta));
             cellsInAgr = cellsInAgreement(*m1.getOriginalMap(), *m2.getMovingMap());
             currentFitness = deltaHeuristic(*m1.getOriginalMap(), *m2.getMovingMap());
@@ -77,19 +77,19 @@ void MergeAlgorithm::randomAdaptiveWalk(int numSteps, const QuadMap &m1, QuadMap
             samples.clear();
         }
 
-        //  Akceptacja probki jezeli polepsza heurystyke, lub zostala wylosowana przez randomSelector()
+        //  Accepting new sample
         if(currentFitness < bestFitness || randomSelector(t, s) == s)
         {
             if(itersSinceLastNewBest == 1500) { std::cout << "ZAKONCZONO WCZESNIEJ\n"; break; }
 
-            //  Jeżeli pokrycie jest odpowiednio wysokie, zapisz transformacje do pliku
+            //  Write to txt if coverage exceeds treshold
             if(currentAI > 80 && currentAI < 99 && cellsInAgr > cellsTresh)
             {
                 if(currentAI > bestAI) { bestAI = currentAI; }
                 goodTransformations.insert(std::make_pair(currentAI * cellsInAgr, s));
             }
 
-            // Jeżeli tylko nastąpiło polepszenie heurystyki
+            // If new heuristic is "better" than previous
             if((currentFitness < bestbestFitness) && cellsInAgr > cellsTresh)
             {
                 bestTransformation = s;
@@ -103,7 +103,7 @@ void MergeAlgorithm::randomAdaptiveWalk(int numSteps, const QuadMap &m1, QuadMap
             t = s;
             bestFitness = currentFitness;
 
-            //  Zapamietanie ostatnich probek
+            //  Tracking previous samples
             if(emergencyTransformations.size() < 10)
             {
                 emergencyTransformations.push_back(t);
@@ -113,94 +113,13 @@ void MergeAlgorithm::randomAdaptiveWalk(int numSteps, const QuadMap &m1, QuadMap
                 rotate(emergencyTransformations.begin(), emergencyTransformations.begin() + 1, emergencyTransformations.end());
                 emergencyTransformations.back() = t;
             }
-            // Aktualizacja parametrow rozkladu Gaussa
+            // Gauss distribution parameters update
             noise = updateGauss(s);
         }
         ++step;
     }
-    //  Transformacja mapy zgodnie z najlepszym uzyskanym przeksztalceniem
+    //  Set final map transofrmation
     m2.transformMapInPlace(bestTransformation.tX, bestTransformation.tY, degToRad(bestTransformation.theta));
-    std::cout << "\nNAJLEPSZE UZYSKANE PRZEKSZTALCENIE: " << bestTransformation << std::endl;
-    std::cout << "NAJLEPSZA HEURYSTYKA: " << bestbestFitness << std::endl;
-    std::cout << "WSKAZNIK NAJLEPSZEJ TRANSFORMACJI AI: " << bestTransformAI << std::endl;
-    std::cout << "NAJLEPSZE REZULTATY UZYSKANO W ITERACJI: " << bestIter << std::endl;
-    std::cout << "NAJLEPSZY WSKAZNIK AI: " << bestAI << std::endl;
-    std::cout << "KONIEC\n";
-
-    for(const auto &elem : goodTransformations)
-    {
-        std::cout << "AI * #CELLSAGREE = " << elem.first << " TRANSFORMATION: " << elem.second << std::endl;
-    }
-}
-
-void MergeAlgorithm::newtonMinimization(const QuadMap &m1, QuadMap &m2, double tx, double ty, double theta)
-{
-    transformation t0 = transformation(tx, ty, theta);
-    transformation firstOrder, secondOrder;
-    transformation d, temp;
-    double delta{0.2};
-
-    for(int i = 0; i < 10; ++i)
-    {
-        firstOrder = transformation(0, 0, 0);
-        secondOrder = transformation(0, 0, 0);
-        d = transformation(0, 0, 0);
-
-        m2.transformMapInPlace(t0.tX + delta, t0.tY, degToRad(t0.theta));
-        firstOrder.tX += deltaHeuristic(*m1.getOriginalMap(), *m2.getMovingMap());
-        m2.transformMapInPlace(t0.tX, t0.tY, degToRad(t0.theta));
-        m2.transformMapInPlace(t0.tX - delta, t0.tY, degToRad(t0.theta));
-        firstOrder.tX -= deltaHeuristic(*m1.getOriginalMap(), *m2.getMovingMap());
-
-        m2.transformMapInPlace(t0.tX, t0.tY + delta, degToRad(t0.theta));
-        firstOrder.tY += deltaHeuristic(*m1.getOriginalMap(), *m2.getMovingMap());
-        m2.transformMapInPlace(t0.tX, t0.tY, degToRad(t0.theta));
-        m2.transformMapInPlace(t0.tX, t0.tY - delta, degToRad(t0.theta));
-        firstOrder.tY -= deltaHeuristic(*m1.getOriginalMap(), *m2.getMovingMap());
-
-        m2.transformMapInPlace(t0.tX, t0.tY, degToRad(t0.theta + delta));
-        firstOrder.theta += deltaHeuristic(*m1.getOriginalMap(), *m2.getMovingMap());
-        m2.transformMapInPlace(t0.tX, t0.tY, degToRad(t0.theta));
-        m2.transformMapInPlace(t0.tX, t0.tY, degToRad(t0.theta - delta));
-        firstOrder.theta -= deltaHeuristic(*m1.getOriginalMap(), *m2.getMovingMap());
-
-        firstOrder = firstOrder / (2 * delta);
-
-        m2.transformMapInPlace(t0.tX, t0.tY, degToRad(t0.theta));
-        m2.transformMapInPlace(t0.tX + delta, t0.tY, degToRad(t0.theta));
-        secondOrder.tX += deltaHeuristic(*m1.getOriginalMap(), *m2.getMovingMap());
-        m2.transformMapInPlace(t0.tX, t0.tY, degToRad(t0.theta));
-        m2.transformMapInPlace(t0.tX - delta, t0.tY, degToRad(t0.theta));
-        secondOrder.tX -= deltaHeuristic(*m1.getOriginalMap(), *m2.getMovingMap());
-        m2.transformMapInPlace(t0.tX, t0.tY, degToRad(t0.theta));
-        secondOrder.tX -= 2 * deltaHeuristic(*m1.getOriginalMap(), *m2.getMovingMap());
-
-        m2.transformMapInPlace(t0.tX, t0.tY, degToRad(t0.theta));
-        m2.transformMapInPlace(t0.tX, t0.tY + delta, degToRad(t0.theta));
-        secondOrder.tY += deltaHeuristic(*m1.getOriginalMap(), *m2.getMovingMap());
-        m2.transformMapInPlace(t0.tX, t0.tY, degToRad(t0.theta));
-        m2.transformMapInPlace(t0.tX, t0.tY - delta, degToRad(t0.theta));
-        secondOrder.tY -= deltaHeuristic(*m1.getOriginalMap(), *m2.getMovingMap());
-        m2.transformMapInPlace(t0.tX, t0.tY, degToRad(t0.theta));
-        secondOrder.tY -= 2 * deltaHeuristic(*m1.getOriginalMap(), *m2.getMovingMap());
-
-        m2.transformMapInPlace(t0.tX, t0.tY, degToRad(t0.theta));
-        m2.transformMapInPlace(t0.tX, t0.tY, degToRad(t0.theta + delta));
-        secondOrder.theta += deltaHeuristic(*m1.getOriginalMap(), *m2.getMovingMap());
-        m2.transformMapInPlace(t0.tX, t0.tY, degToRad(t0.theta));
-        m2.transformMapInPlace(t0.tX, t0.tY, degToRad(t0.theta - delta));
-        secondOrder.theta -= deltaHeuristic(*m1.getOriginalMap(), *m2.getMovingMap());
-        m2.transformMapInPlace(t0.tX, t0.tY, degToRad(t0.theta));
-        secondOrder.theta -= 2 * deltaHeuristic(*m1.getOriginalMap(), *m2.getMovingMap());
-
-        secondOrder = secondOrder / (delta * delta);
-
-        temp = firstOrder / secondOrder;
-        d = -temp;
-
-        t0 = t0 + d;
-        m2.transformMapInPlace(t0.tX, t0.tY, degToRad(t0.theta));
-    }
 }
 
 long double MergeAlgorithm::deltaHeuristic(const quadmap::QuadTree &m1, const quadmap::QuadTree &m2)
@@ -231,7 +150,6 @@ std::vector<std::vector<int>> MergeAlgorithm::constructDMap(quadmap::QuadTree q,
     int tempY{0};
     int h{0};
 
-    // Przypisuje wartosci 0 elementom w dMapie, ktore maja okreslony stan state
     for(auto it = q.begin_leafs(), end = q.end_leafs(); it!= end; ++it)
     {
         tempX = abs(box.topLeft.y() - it.getCoordinate().y()) / q.getResolution();
@@ -243,7 +161,7 @@ std::vector<std::vector<int>> MergeAlgorithm::constructDMap(quadmap::QuadTree q,
             dmap.at(tempX).at(tempY) = 0;
         }
     }
-    for (int x = 1; x < box.rows; ++x) //  Start z lewego gornego naroznika
+    for (int x = 1; x < box.rows; ++x)
     {
         for (int y = 1; y < box.columns; ++y)
         {
@@ -251,7 +169,7 @@ std::vector<std::vector<int>> MergeAlgorithm::constructDMap(quadmap::QuadTree q,
             dmap.at(x).at(y) = std::min(dmap.at(x).at(y), h);
         }
     }
-    for (int x = box.rows - 2; x >= 0; --x) //  Start z prawego dolnego naroznika
+    for (int x = box.rows - 2; x >= 0; --x)
     {
         for (int y = box.columns - 2; y >= 0; --y)
         {
@@ -259,7 +177,7 @@ std::vector<std::vector<int>> MergeAlgorithm::constructDMap(quadmap::QuadTree q,
             dmap.at(x).at(y) = std::min(dmap.at(x).at(y), h);
         }
     }
-    for (int x = box.rows - 2; x >= 0; --x) //  Start z lewego dolnego naroznika
+    for (int x = box.rows - 2; x >= 0; --x)
     {
         for (int y = 1; y < box.columns; ++y)
         {
@@ -267,7 +185,7 @@ std::vector<std::vector<int>> MergeAlgorithm::constructDMap(quadmap::QuadTree q,
             dmap.at(x).at(y) = std::min(dmap.at(x).at(y), h);
         }
     }
-    for (int x = 1; x < box.rows; ++x)  //  Start z prawego gornego naroznika
+    for (int x = 1; x < box.rows; ++x)
     {
         for (int y = box.columns - 2; y >= 0; --y)
         {

@@ -136,12 +136,12 @@ void QuadMap::updateMarkers(markerMapType type)
             cell.pose.position.y = it.getCoordinate().y();
             cell.pose.orientation.w = 1.0;
 
-            //  Wielkosc markera
+            //  Marker size
             cell.scale.x = it.getSize();
             cell.scale.y = it.getSize();
             cell.scale.z = height;
 
-            //  Odcien szarosci w zaleznosci od prawdopodobienstwa
+            //  Grayscale depend on occupancy probability
             if (it->getOccupancy() < 0.13)
             {
                 cell.color.r = 1;
@@ -198,12 +198,12 @@ void QuadMap::updateMarkers(markerMapType type)
             cell.pose.position.y = it.getCoordinate().y();
             cell.pose.orientation.w = 1.0;
 
-            //  Wielkosc markera
+            //  Marker size
             cell.scale.x = it.getSize();
             cell.scale.y = it.getSize();
             cell.scale.z = height;
 
-            //  Odcien szarosci w zaleznosci od prawdopodobienstwa
+            ///  Grayscale depend on occupancy probability
             if (it->getOccupancy() < 0.13) {
                 cell.color.r = 1;
                 cell.color.g = 1;
@@ -244,7 +244,6 @@ void QuadMap::updateMarkers(markerMapType type)
         }
 }
 
-// Domyslnie ciemno - niebieski
 void QuadMap::configureMarkers(double r, double g, double b)
 {
     cell.header.frame_id = "/my_frame";
@@ -267,7 +266,7 @@ void QuadMap::configureMarkers(double r, double g, double b)
 
 void QuadMap::loadRawTrimmedData(const std::string &fileName, double leftBound, double rightBound)
 {
-    std::string path = "/home/dawid/catkin_ws/devel/lib/quad_tree_maps/" + fileName;
+    std::string path = "../maps/" + fileName;
     inFile.open(path);
     if(!inFile.is_open())
         return;
@@ -288,7 +287,7 @@ void QuadMap::loadRawTrimmedData(const std::string &fileName, double leftBound, 
 void QuadMap::writeMeasurments(double xR, double yR, double xM, double yM, int step)
 {
     if(!outFile.is_open())
-        outFile.open("/home/dawid/catkin_ws/devel/lib/quad_tree_maps/leftPart2.txt");
+        outFile.open("../maps/leftPart2.txt");
 
     outFile << xR << " " << yR << " " << xM << " " << yM << '\n';
 }

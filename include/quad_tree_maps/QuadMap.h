@@ -15,7 +15,32 @@
 #include <fstream>
 #include <vector>
 
+enum markerMapType{ EXACT, MOVING };
+
 class QuadMap {
+public:
+    explicit QuadMap(const std::string &mNamespace, const double &res, bool enableSubscribers = false);
+    explicit QuadMap(const std::string &mNamespace, quadmap::QuadTree &q);
+
+    ~QuadMap() { if(outFile.is_open()) outFile.close(); }
+    void prepareData();
+    void updateMarkers(markerMapType type);
+    void transformMapInPlace(double tX, double tY, double theta);
+    void writeMeasurments(double xR, double yR, double xM, double yM, int step = 1);
+    std::shared_ptr<quadmap::QuadTree> getOriginalMap() const { return q; }
+    std::shared_ptr<quadmap::QuadTree> getMovingMap() const { return movingMap; }
+    std::pair<double, double> polarToCart(const double &angle, const double &laser);
+    octomap_msgs::Octomap quadmapToOctomap(double height = 0.1);
+    void writeMap(const std::string &fileName, bool fullProbability = true);
+    void scanCallback(const sensor_msgs::LaserScan::ConstPtr& msg);
+    void odomCallback(const nav_msgs::Odometry::ConstPtr& msg);
+    void configureMarkers(double r = 0.0, double g = 0.0, double b = 0.5);
+    void loadQuadMap(const std::string &fileName);
+    void loadTurtlebotData(const std::string &fileName, double maxDistance);
+    void loadRawTrimmedData(const std::string &fileName, double leftBound, double rightBound);
+    visualization_msgs::Marker getBoundaryMarkers() const { return boundary; }
+    visualization_msgs::MarkerArray getCellsMarkers() const { return cells; }
+
 private:
     ros::NodeHandle n;
     ros::Subscriber laserSub;
@@ -38,29 +63,6 @@ private:
     std::ifstream inFile;
     std::ofstream outFile;
 
-public:
-    explicit QuadMap(const std::string &mNamespace, const double &res, bool enableSubscribers = false);
-    explicit QuadMap(const std::string &mNamespace, quadmap::QuadTree &q);
-    ~QuadMap() { if(outFile.is_open()) outFile.close(); }
-
-    enum markerMapType{ EXACT, MOVING };
-    void prepareData();
-    void updateMarkers(markerMapType type);
-    void transformMapInPlace(double tX, double tY, double theta);
-    void writeMeasurments(double xR, double yR, double xM, double yM, int step = 1);
-    std::shared_ptr<quadmap::QuadTree> getOriginalMap() const { return q; }
-    std::shared_ptr<quadmap::QuadTree> getMovingMap() const { return movingMap; }
-    std::pair<double, double> polarToCart(const double &angle, const double &laser);
-    octomap_msgs::Octomap quadmapToOctomap(double height = 0.1);
-    void writeMap(const std::string &fileName, bool fullProbability = true);
-    void scanCallback(const sensor_msgs::LaserScan::ConstPtr& msg);
-    void odomCallback(const nav_msgs::Odometry::ConstPtr& msg);
-    void configureMarkers(double r = 0.0, double g = 0.0, double b = 0.5);
-    void loadQuadMap(const std::string &fileName);
-    void loadTurtlebotData(const std::string &fileName, double maxDistance);
-    void loadRawTrimmedData(const std::string &fileName, double leftBound, double rightBound);
-    visualization_msgs::Marker getBoundaryMarkers() const { return boundary; }
-    visualization_msgs::MarkerArray getCellsMarkers() const { return cells; }
 };
 
 #endif //QUAD_TREE_MAPS_QUADMAP_H
