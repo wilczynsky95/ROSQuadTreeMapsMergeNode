@@ -86,7 +86,7 @@ void MergeAlgorithm::randomAdaptiveWalk(int numSteps, const QuadMap &m1, QuadMap
         //  Accepting new sample
         if(currentFitness < bestFitness || randomSelector(t, s) == s)
         {
-            if(itersSinceLastNewBest == 1500) break;
+            if(itersSinceLastNewBest == 1500) { std::cout << "ZAKONCZONO WCZESNIEJ\n"; break; }
 
             //  Write to txt if coverage exceeds treshold
             if(currentAI > 80 && currentAI < 99 && cellsInAgr > cellsTresh)
