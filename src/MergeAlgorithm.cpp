@@ -1,5 +1,13 @@
 #include "quad_tree_maps/MergeAlgorithm.h"
 
+MergeAlgorithm::MergeAlgorithm()
+    : cLock(100),
+    M(3),
+    cellsTresh(150),
+    minVariance(0.2),
+    mean(0)
+{}
+
 std::pair<transformation, transformation> MergeAlgorithm::updateGauss(const transformation &sample)
 {
     transformation variance;
@@ -21,11 +29,9 @@ std::pair<transformation, transformation> MergeAlgorithm::updateGauss(const tran
 
         return std::pair<transformation, transformation>(mean, variance);
     }
-    else
-    {
-        samples.push_back(sample);
-        return std::pair<transformation, transformation>(transformation(), transformation());
-    }
+
+    samples.push_back(sample);
+    return std::pair<transformation, transformation>(transformation(), transformation());
 }
 
 void MergeAlgorithm::randomAdaptiveWalk(int numSteps, const QuadMap &m1, QuadMap &m2)
@@ -131,13 +137,15 @@ MergeAlgorithm::transformation MergeAlgorithm::randomSelector(const transformati
 {
     if(rand() % 3 == 0)
         return s;
-    else
-        return t;
+    return t;
 }
 
 double MergeAlgorithm::randGenerator(double mean, double variance)
 {
+    static std::random_device seed;
+    static std::mt19937 mersenneTwisterEngine(seed());
     std::normal_distribution<double> distribution(mean, sqrt(variance));
+
     return distribution(gen);
 }
 
@@ -332,12 +340,12 @@ double MergeAlgorithm::md(const double &p1x, const double &p1y, const double &p2
 
 MergeAlgorithm::cellState MergeAlgorithm::binaryToState(bool binary)
 {
-    return binary ? MergeAlgorithm::OCCUPIED : MergeAlgorithm::FREE;
+    return binary ? cellState::OCCUPIED : cellState::FREE;
 }
 
 bool MergeAlgorithm::stateToBinary(MergeAlgorithm::cellState state)
 {
-    return state == MergeAlgorithm::OCCUPIED;
+    return state == cellState::OCCUPIED;
 }
 
 double MergeAlgorithm::degToRad(const double &deg)

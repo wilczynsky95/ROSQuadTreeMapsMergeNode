@@ -1,18 +1,18 @@
 #ifndef QUAD_TREE_MAPS_MERGEALGORITHM_H
 #define QUAD_TREE_MAPS_MERGEALGORITHM_H
-#include "quad_tree_maps/QuadMap.h"
-#include "UtilityStructs.h"
 #include <quadmap/QuadTree.h>
 #include <vector>
 #include <algorithm>
 #include <random>
 #include <chrono>
+#include "quad_tree_maps/QuadMap.h"
+#include "UtilityStructs.h"
 
-enum cellState { FREE, UNKNOWN, OCCUPIED };
+enum class cellState { FREE, UNKNOWN, OCCUPIED };
 
 class MergeAlgorithm {
 public:
-    explicit MergeAlgorithm() = default;
+    explicit MergeAlgorithm();
 
     void randomAdaptiveWalk(int numSteps, const QuadMap &m1, QuadMap &m2);
     void newtonMinimization(const QuadMap &m1, QuadMap &m2, double tx, double ty, double theta);
@@ -36,15 +36,13 @@ public:
     std::pair<transformation, transformation> updateGauss(const transformation &sample);
 
 private:
-    const double cLock{100};
-    static constexpr int M{3};
-    const int cellsTresh{150};
-    static constexpr double minVariance{0.2};
-    static constexpr double mean{0};
+    const double cLock;
+    const int M;
+    const int cellsTresh;
+    const double minVariance;
+    const double mean;
 
     std::vector<transformation> samples;
-    std::random_device rd{};
-    std::mt19937 gen{rd()};
 };
 
 #endif //QUAD_TREE_MAPS_MERGEALGORITHM_H
